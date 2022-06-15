@@ -191,7 +191,7 @@ class SQS implements Queue
     public static function shutdown(): void
     {
         self::$instance->client->destroy();
-        unset(self::$instance);
+        unset(self::$instance->client);
     }
 
     public function __destruct()
