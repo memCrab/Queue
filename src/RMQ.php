@@ -14,7 +14,7 @@ class RMQ implements Queue
     private static int $port;
     private static string $username;
     private static string $password;
-    private $client;
+    private AMQPStreamConnection $client;
     private $channel;
 
 
@@ -31,7 +31,7 @@ class RMQ implements Queue
     /**
      * @return Queue
      */
-    public static function obj(): Queue
+    public static function obj(): self
     {
         if (!isset(self::$instance) || !(self::$instance instanceof self)) {
             self::$instance = new self();
@@ -69,7 +69,7 @@ class RMQ implements Queue
     /**
      * @return Queue
      */
-    public function connect(): Queue
+    public function connect(): self
     {
         $this->client = new AMQPStreamConnection(
             self::$host,
@@ -179,7 +179,7 @@ class RMQ implements Queue
     }
 
     // TODO: add destructor with disconnect of connection
-    // TODO: recheck if we realy need do both channel and client close() in shutdown or only client need to looc to documentaion of Rabbit SDK
+    // TODO: recheck if we realy need do both channel and client close() in shutdown or only client? does any of them has method close? need to look to documentaion of Rabbit SDK
     // TODO: add checks in shutdown if instance are already initialized before call close() methods as it static method and can be called it self even before any obj() initialization
     /**
      * @return void

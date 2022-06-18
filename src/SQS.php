@@ -6,9 +6,10 @@ namespace Memcrab\Queue;
 
 use Aws\Sqs\SqsClient;
 
-class SQS implements Queue
+class SQS
 {
-    private $client;
+    public  $client = null;
+    public  $test = null;
     private array $urls;
     private static SQS $instance;
     private static string $region;
@@ -27,7 +28,7 @@ class SQS implements Queue
     {
     }
 
-    public static function obj(): Queue
+    public static function obj(): self
     {
         if (!isset(self::$instance) || !(self::$instance instanceof self)) {
             self::$instance = new self();
@@ -74,20 +75,20 @@ class SQS implements Queue
     /**
      * @return Queue
      */
-    public function connect(): Queue
+    public function connect(): self
     {
         try {
-            $this->client = new SqsClient(
-                [
-                    'region' => self::$region,
-                    'version' => self::$version,
-                    'endpoint' => self::$endpoint,
-                    'credentials' => [
-                        'key' => self::$key,
-                        'secret' => self::$secret,
-                    ]
+            $Test =  $this;
+            $Test->client = new SqsClient([
+                'region' => self::$region,
+                'version' => self::$version,
+                'endpoint' => self::$endpoint,
+                'credentials' => [
+                    'key' => self::$key,
+                    'secret' => self::$secret,
                 ]
-            );
+            ]);
+            exit('Server is running...000');
         } catch (\Exception $e) {
             error_log((string) $e);
             throw $e;
@@ -101,7 +102,7 @@ class SQS implements Queue
      * @param  array   $atributes
      * @return mixed
      */
-    public function registerQueue(string $name, ?array $atributes = []): Queue
+    public function registerQueue(string $name, ?array $atributes = []): self
     {
         try {
 
@@ -124,7 +125,7 @@ class SQS implements Queue
      * @param  int     $VisibilityTimeout
      * @return mixed
      */
-    public function changeMessageVisibility(string $name, array $message, int $VisibilityTimeout): Queue
+    public function changeMessageVisibility(string $name, array $message, int $VisibilityTimeout): self
     {
         try {
 
@@ -221,7 +222,6 @@ class SQS implements Queue
     public static function shutdown(): void
     {
         if (isset(self::$instance->client)) {
-            self::$instance->client->destroy();
             unset(self::$instance->client);
         }
     }
@@ -229,7 +229,7 @@ class SQS implements Queue
     public function __destruct()
     {
         if (!empty($this->client)) {
-            $this->client->destroy();
+            unset($this->client);
         }
     }
 }
