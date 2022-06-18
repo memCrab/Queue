@@ -11,6 +11,7 @@ class SQS implements Queue
 {
 
     private static SQS $instance;
+    private static $config;
     private $client;
     private array $urls;
 
@@ -34,30 +35,32 @@ class SQS implements Queue
     }
 
     /**
-     * @param  string  $region
-     * @param  string  $key
-     * @param  string  $secret
-     * @param  string  $version
-     * @param  string  $endpoint
-     * @return mixed
+     * @param array $properties
+     * 
+     * @return array
      */
-    public function setConnect(string $region, string $key, string $secret, string $version, ?string $endpoint): Queue
+    public static function setConnectionProperties(array $properties): Queue
+    {
+        self::$conectionProperties = [
+            'region' => $properties['region'],
+            'version' => $properties['version'],
+            'endpoint' => $properties['endpoint'];
+            'credentials' => [
+                'key' => $properties['key'],
+                'secret' => $properties['secret'],
+            ]
+        ];
+
+        return $this;
+    }
+
+    /**
+     * @return Queue
+     */
+    public function connect(): Queue
     {
         try {
-            $config = [
-                'region' => $region,
-                'version' => $version,
-                'credentials' => [
-                    'key' => $key,
-                    'secret' => $secret,
-                ]
-            ];
-
-            if ($endpoint != null && \mb_strlen(trim($endpoint)) > 0) {
-                $config['endpoint'] = $endpoint;
-            }
-
-            $this->client = new SqsClient($config);
+            $this->client = new SqsClient(self::connectionProperties);
         } catch (AwsException $e) {
             error_log((string) $e);
             throw $e;
@@ -113,19 +116,19 @@ class SQS implements Queue
 
     /**
      * @param  string  $name
-     * @param  array   $massageBody
+     * @param  array   $messageBody
      * @param  array   $attributes
      * @param  int     $delaySeconds
      * @return mixed
      */
-    public function sendMessage(string $name, array $massageBody, ?array $attributes = [], int $delaySeconds = 10)
+    public function sendMessage(string $name, array $messageBody, ?array $attributes = [], int $delaySeconds = 10)
     {
         try {
 
             $result = $this->client->sendMessage([
                 'DelaySeconds' => $delaySeconds,
                 'MessageAttributes' => $attributes,
-                'MessageBody' => serialize($massageBody),
+                'MessageBody' => serialize($messageBody),
                 'QueueUrl' => $this->urls[$name],
             ]);
         } catch (AwsException $e) {
