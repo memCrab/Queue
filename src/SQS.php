@@ -5,20 +5,22 @@ declare(strict_types=1);
 namespace Memcrab\Queue;
 
 use Aws\Sqs\SqsClient;
-use Aws\Exception\AwsException;
 
 class SQS implements Queue
 {
-
-    private static SQS $instance;
-    private static $config;
     private $client;
     private array $urls;
+    private static SQS $instance;
+    private static string $region;
+    private static string $version;
+    private static string $endpoint;
+    private static string $key;
+    private static string $secret;
 
-    public function __construct()
+    private function __construct()
     {
     }
-    public function __clone()
+    private function __clone()
     {
     }
     public function __wakeup()
@@ -39,19 +41,34 @@ class SQS implements Queue
      * 
      * @return array
      */
-    public static function setConnectionProperties(array $properties): Queue
+    public static function setConnectionProperties(array $properties): void
     {
-        self::$conectionProperties = [
-            'region' => $properties['region'],
-            'version' => $properties['version'],
-            'endpoint' => $properties['endpoint'];
-            'credentials' => [
-                'key' => $properties['key'],
-                'secret' => $properties['secret'],
-            ]
-        ];
+        try {
+            if (!isset($properties['region']) || empty($properties['region']) || !is_string($properties['region'])) {
+                throw new \Exception("Aws `region` property need to be string");
+            }
+            if (!isset($properties['version']) || empty($properties['version']) || !is_string($properties['version'])) {
+                throw new \Exception("Aws `version` property need to be string");
+            }
+            if (!isset($properties['endpoint']) || empty($properties['endpoint']) || !is_string($properties['endpoint'])) {
+                throw new \Exception("Aws `endpoint` property need to be string");
+            }
+            if (!isset($properties['key']) || empty($properties['key']) || !is_string($properties['key'])) {
+                throw new \Exception("Aws `key` property need to be string");
+            }
+            if (!isset($properties['secret']) || empty($properties['secret']) || !is_string($properties['secret'])) {
+                throw new \Exception("Aws `secret` property need to be string");
+            }
 
-        return $this;
+            self::$region = $properties['region'];
+            self::$version = $properties['version'];
+            self::$endpoint = $properties['endpoint'];
+            self::$key = $properties['key'];
+            self::$secret = $properties['secret'];
+        } catch (\Exception $e) {
+            error_log((string) $e);
+            throw $e;
+        }
     }
 
     /**
@@ -60,8 +77,18 @@ class SQS implements Queue
     public function connect(): Queue
     {
         try {
-            $this->client = new SqsClient(self::connectionProperties);
-        } catch (AwsException $e) {
+            $this->client = new SqsClient(
+                [
+                    'region' => self::$region,
+                    'version' => self::$version,
+                    'endpoint' => self::$endpoint,
+                    'credentials' => [
+                        'key' => self::$key,
+                        'secret' => self::$secret,
+                    ]
+                ]
+            );
+        } catch (\Exception $e) {
             error_log((string) $e);
             throw $e;
         }
@@ -83,7 +110,7 @@ class SQS implements Queue
                 'Attributes' => $atributes,
             ]);
             $this->urls[$name] = $result->get('QueueUrl');
-        } catch (AwsException $e) {
+        } catch (\Exception $e) {
             error_log((string) $e);
             throw $e;
         }
@@ -106,7 +133,7 @@ class SQS implements Queue
                 'ReceiptHandle' => $message['ReceiptHandle'],
                 'VisibilityTimeout' => $VisibilityTimeout,
             ]);
-        } catch (AwsException $e) {
+        } catch (\Exception $e) {
             error_log((string) $e);
             throw $e;
         }
@@ -131,7 +158,7 @@ class SQS implements Queue
                 'MessageBody' => serialize($messageBody),
                 'QueueUrl' => $this->urls[$name],
             ]);
-        } catch (AwsException $e) {
+        } catch (\Exception $e) {
             error_log((string) $e);
             throw $e;
         }
@@ -152,7 +179,7 @@ class SQS implements Queue
                 'QueueUrl' => $this->urls[$name], // REQUIRED
                 'WaitTimeSeconds' => 20,
             ]);
-        } catch (AwsException $e) {
+        } catch (\Exception $e) {
             error_log((string) $e);
             throw $e;
         }
@@ -171,7 +198,7 @@ class SQS implements Queue
                 'QueueUrl' => $this->urls[$name], // REQUIRED
                 'ReceiptHandle' => $message['ReceiptHandle'], // REQUIRED
             ]);
-        } catch (AwsException $e) {
+        } catch (\Exception $e) {
             error_log((string) $e);
             throw $e;
         }
@@ -193,7 +220,7 @@ class SQS implements Queue
 
     public static function shutdown(): void
     {
-        if(isset(self::$instance->client)) {
+        if (isset(self::$instance->client)) {
             self::$instance->client->destroy();
             unset(self::$instance->client);
         }
@@ -201,7 +228,7 @@ class SQS implements Queue
 
     public function __destruct()
     {
-        if(!empty($this->client)) {
+        if (!empty($this->client)) {
             $this->client->destroy();
         }
     }

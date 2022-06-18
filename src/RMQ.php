@@ -10,14 +10,18 @@ use PhpAmqpLib\Message\AMQPMessage as AMQPMessage;
 class RMQ implements Queue
 {
     private static RMQ $instance;
-    private static $conectionProperties;
+    private static string $host;
+    private static int $port;
+    private static string $username;
+    private static string $password;
     private $client;
     private $channel;
 
-    public function __construct()
+
+    private function __construct()
     {
     }
-    public function __clone()
+    private function __clone()
     {
     }
     public function __wakeup()
@@ -36,19 +40,30 @@ class RMQ implements Queue
         return self::$instance;
     }
 
-    /**
-     * @param array $properties
-     * 
-     * @return array
-     */
     public static function setConnectionProperties(array $properties): void
     {
-        self::$conectionProperties = [
-            'host' => $properties[0],
-            'port' => $properties[1],
-            'username' => $properties[2],
-            'pass' => $properties[3]
-        ];
+        try {
+            if (!isset($properties['host']) || empty($properties['host']) || !is_string($properties['host'])) {
+                throw new \Exception("RabbitMQ `host` property need to be string");
+            }
+            if (!isset($properties['port']) || !is_int($properties['port'])) {
+                throw new \Exception("RabbitMQ `port` property need to be int");
+            }
+            if (!isset($properties['username']) || empty($properties['username']) || !is_string($properties['username'])) {
+                throw new \Exception("RabbitMQ `username` property need to be string");
+            }
+            if (!isset($properties['password']) || empty($properties['password']) || !is_string($properties['password'])) {
+                throw new \Exception("RabbitMQ `password` property need to be string");
+            }
+
+            self::$host = $properties['host'];
+            self::$port = $properties['port'];
+            self::$username = $properties['username'];
+            self::$password = $properties['password'];
+        } catch (\Exception $e) {
+            error_log((string) $e);
+            throw $e;
+        }
     }
 
     /**
@@ -56,13 +71,14 @@ class RMQ implements Queue
      */
     public function connect(): Queue
     {
-        $client = $this->client = new AMQPStreamConnection(
-            self::$conectionProperties['host'],
-            self::$conectionProperties['port'],
-            self::$conectionProperties['username'],
-            self::$conectionProperties['pass']
+        $this->client = new AMQPStreamConnection(
+            self::$host,
+            self::$port,
+            self::$username,
+            self::$password
         );
-        $this->channel = $client->channel();
+
+        $this->channel = $this->client->channel();
 
         return $this;
     }
@@ -75,15 +91,9 @@ class RMQ implements Queue
      * @param bool $auto_delete
      * @return array
      */
-    public function registerQueue(
-        string $name,
-        bool $passive = false,
-        bool $durable = false,
-        bool $exclusive = false,
-        bool $auto_delete = false
-    ): array {
+    public function registerQueue(string $name, bool $passive = false, bool $durable = false, bool $exclusive = false, bool $auto_delete = false): array
+    {
         $result = $this->channel->queue_declare($name, $passive, $durable, $exclusive, $auto_delete);
-
         return $result;
     }
 
@@ -96,15 +106,9 @@ class RMQ implements Queue
      * 
      * @return [type]
      */
-    public function registerExchange(
-        string $name,
-        string $type,
-        bool $passive = false,
-        bool $durable = false,
-        bool $auto_delete = false
-    ) {
+    public function registerExchange(string $name, string $type, bool $passive = false, bool $durable = false, bool $auto_delete = false)
+    {
         $result = $this->channel->exchange_declare($name, $type, $passive, $durable, $auto_delete);
-
         return $result;
     }
 
@@ -174,6 +178,9 @@ class RMQ implements Queue
         return $this->client;
     }
 
+    // TODO: add destructor with disconnect of connection
+    // TODO: recheck if we realy need do both channel and client close() in shutdown or only client need to looc to documentaion of Rabbit SDK
+    // TODO: add checks in shutdown if instance are already initialized before call close() methods as it static method and can be called it self even before any obj() initialization
     /**
      * @return void
      */
