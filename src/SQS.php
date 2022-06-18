@@ -11,7 +11,7 @@ class SQS implements Queue
 {
 
     private static SQS $instance;
-    private $config;
+    private static $config;
     private $client;
     private array $urls;
 
@@ -39,22 +39,19 @@ class SQS implements Queue
      * 
      * @return array
      */
-    public function setConnectionProperties(array $properties): array
+    public static function setConnectionProperties(array $properties): Queue
     {
-        $this->config = [
-            'region' => $properties[0],
-            'version' => $properties[3],
+        self::$conectionProperties = [
+            'region' => $properties['region'],
+            'version' => $properties['version'],
+            'endpoint' => $properties['endpoint'];
             'credentials' => [
-                'key' => $properties[1],
-                'secret' => $properties[2],
+                'key' => $properties['key'],
+                'secret' => $properties['secret'],
             ]
         ];
 
-        if ($properties[4] != null && \mb_strlen(trim($properties[4])) > 0) {
-            $this->config['endpoint'] = $properties[4];
-        }
-
-        return $this->config;
+        return $this;
     }
 
     /**
@@ -63,7 +60,7 @@ class SQS implements Queue
     public function connect(): Queue
     {
         try {
-            $this->client = new SqsClient($this->config);
+            $this->client = new SqsClient(self::connectionProperties);
         } catch (AwsException $e) {
             error_log((string) $e);
             throw $e;
