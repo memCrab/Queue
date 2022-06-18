@@ -37,19 +37,17 @@ class RMQ implements Queue
     }
 
     /**
-     * @param string $host
-     * @param string $port
-     * @param string $username,
-     * @param string $pass
+     * @param array $properties
+     * 
      * @return array
      */
-    public function setConfigValue(string $host, string $port, string $username, string $pass): array
+    public function setConnectionProperties(array $properties): array
     {
         $this->config = [
-            'host' => $host,
-            'port' => $port,
-            'username' => $username,
-            'pass' => $pass
+            'host' => $properties[0],
+            'port' => $properties[1],
+            'username' => $properties[2],
+            'pass' => $properties[3]
         ];
 
         return $this->config;
@@ -58,7 +56,7 @@ class RMQ implements Queue
     /**
      * @return Queue
      */
-    public function setConnect(): Queue
+    public function connect(): Queue
     {
         $client = $this->client = new AMQPStreamConnection(
             $this->config['host'],

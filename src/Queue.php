@@ -7,7 +7,8 @@ namespace Memcrab\Queue;
 interface Queue
 {
     public static function obj(): Queue;
-    public function setConnect(): Queue;
+    public function setConnectionProperties(array $properties): array;
+    public function connect(): Queue;
     public function registerQueue(string $name);
     public function sendMessage(string $name, array $messageBody);
     public function receiveMessage(string $name);

@@ -14,17 +14,17 @@ use Memcrab\Queue\RMQ;
 SQS Client
 ----------
 For starting use SQS Client we need to create a connection to the server like this. Create an instance of SQS and use 2 methods - 
-setConfigValue() and setConnect().
+setConnectionProperties() connect().
 
 $connection = new SQS;
-$connection->setConfigValue(string $region, string $key, string $secret, string $version, ?string $endpoint);
-$connection->setConnect();
+$connection->setConnectionProperties(array $properties);
+$connection->connect();
 
 
-Method setConfigValue(string $region, string $key, string $secret, string $version, ?string $endpoint) - you must get region, credentials from your profile ($key and $secret), version,  
+Method setConnectionProperties(array $properties) - you must get region, credentials from your profile ($key and $secret), version,  
 for example:
 
-$connection->setConfigValue('us-west-2', 'your_aws_access_key_id', 'your_aws_secret_access_key', '2022-11-05');
+$connection->setConnectionProperties(['us-west-2', 'your_aws_access_key_id', 'your_aws_secret_access_key', '2022-11-05']);
 
 
 Next we must declare a queue:
@@ -86,17 +86,17 @@ RabbitMQ Client
 ---------------
 
 For starting use RabbitMQ Client we need to create a connection to the server like this. Create an instance of RMQ and use 2 methods - 
-setConfigValue() and setConnect().
+setConnectionProperties() and connect().
 
 $connection = new RMQ;
-$connection->setConfigValue(string $host, string $port, string $username, string $pass);
-$connection->setConnect();
+$connection->setConnectionProperties(array $properties);
+$connection->connect();
 
 
-Method setConfigValue(string $host, string $port, string $username, string $pass) - you must get hostname, port, username and password, 
+Method setConnectionProperties(array $properties) - you must get hostname, port, username and password, 
 for example:
 
-$connection->setConfigValue('localhost', '5672', 'guest', 'guest');
+$connection->setConnectionProperties(['localhost', '5672', 'guest', 'guest']);
 
 Next the library will create a channel and we must declare a queue:
 

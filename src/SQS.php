@@ -34,33 +34,33 @@ class SQS implements Queue
         return self::$instance;
     }
 
-    public function setConfigValue(string $region, string $key, string $secret, string $version, ?string $endpoint): array
+    /**
+     * @param array $properties
+     * 
+     * @return array
+     */
+    public function setConnectionProperties(array $properties): array
     {
         $this->config = [
-            'region' => $region,
-            'version' => $version,
+            'region' => $properties[0],
+            'version' => $properties[3],
             'credentials' => [
-                'key' => $key,
-                'secret' => $secret,
+                'key' => $properties[1],
+                'secret' => $properties[2],
             ]
         ];
 
-        if ($endpoint != null && \mb_strlen(trim($endpoint)) > 0) {
-            $this->config['endpoint'] = $endpoint;
+        if ($properties[4] != null && \mb_strlen(trim($properties[4])) > 0) {
+            $this->config['endpoint'] = $properties[4];
         }
 
         return $this->config;
     }
 
     /**
-     * @param  string  $region
-     * @param  string  $key
-     * @param  string  $secret
-     * @param  string  $version
-     * @param  string  $endpoint
-     * @return mixed
+     * @return Queue
      */
-    public function setConnect(): Queue
+    public function connect(): Queue
     {
         try {
             $this->client = new SqsClient($this->config);
