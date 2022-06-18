@@ -10,7 +10,7 @@ use PhpAmqpLib\Message\AMQPMessage as AMQPMessage;
 class RMQ implements Queue
 {
     private static RMQ $instance;
-    private $config;
+    private static $conectionProperties;
     private $client;
     private $channel;
 
@@ -41,16 +41,14 @@ class RMQ implements Queue
      * 
      * @return array
      */
-    public function setConnectionProperties(array $properties): array
+    public static function setConnectionProperties(array $properties): void
     {
-        $this->config = [
+        self::$conectionProperties = [
             'host' => $properties[0],
             'port' => $properties[1],
             'username' => $properties[2],
             'pass' => $properties[3]
         ];
-
-        return $this->config;
     }
 
     /**
@@ -59,10 +57,10 @@ class RMQ implements Queue
     public function connect(): Queue
     {
         $client = $this->client = new AMQPStreamConnection(
-            $this->config['host'],
-            $this->config['port'],
-            $this->config['username'],
-            $this->config['pass']
+            self::$conectionProperties['host'],
+            self::$conectionProperties['port'],
+            self::$conectionProperties['username'],
+            self::$conectionProperties['pass']
         );
         $this->channel = $client->channel();
 
