@@ -40,6 +40,11 @@ class RMQ implements QueueInterface
         return self::$instance;
     }
 
+    /**
+     * @param array $properties
+     * 
+     * @return void
+     */
     public static function setConnectionProperties(array $properties): void
     {
         try {
@@ -202,9 +207,21 @@ class RMQ implements QueueInterface
      */
     public static function shutdown(): void
     {
-        self::$instance->channel->close();
-        self::$instance->client->close();
-        unset(self::$instance->channel);
-        unset(self::$instance->client);
+        if (isset(self::$instance->channel)) {
+            self::$instance->channel->close();
+        }
+        if (isset(self::$instance->client)) {
+            self::$instance->client->close();
+        }
+    }
+
+    public function __destruct()
+    {
+        if (!empty($this->channel)) {
+            unset($this->channel);
+        }
+        if (!empty($this->client)) {
+            unset($this->client);
+        }
     }
 }

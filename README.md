@@ -24,7 +24,7 @@ $connection->connect();
 Method setConnectionProperties(array $properties) - you must get region, credentials from your profile ($key and $secret), version,  
 for example:
 
-$connection->setConnectionProperties(['us-west-2', 'your_aws_access_key_id', 'your_aws_secret_access_key', '2022-11-05']);
+$connection->setConnectionProperties(['region' => 'us-west-2', 'key' => 'your_aws_access_key_id', 'secret' => 'your_aws_secret_access_key', 'version' => '2022-11-05']);
 
 
 Next we must declare a queue:
@@ -96,7 +96,7 @@ $connection->connect();
 Method setConnectionProperties(array $properties) - you must get hostname, port, username and password, 
 for example:
 
-$connection->setConnectionProperties(['localhost', '5672', 'guest', 'guest']);
+$connection->setConnectionProperties(['host' => 'localhost', 'port' => '5672', 'username' => 'guest', 'password' => 'guest']);
 
 Next the library will create a channel and we must declare a queue:
 
