@@ -14,5 +14,5 @@ interface QueueInterface
     public function receiveMessage(string $name);
     public function client(): object;
     public function connectionStatus(): bool;
-    public function shutdown(): void;
+    public static function shutdown(): void;
 }

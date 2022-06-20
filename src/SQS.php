@@ -265,10 +265,10 @@ class SQS implements QueueInterface
     /**
      * @return void
      */
-    public function shutdown(): void
+    public static function shutdown(): void
     {
-        if (isset($this->client)) {
-            unset($this->client);
+        if (isset(self::$instance->client)) {
+            unset(self::$instance->client);
         }
     }
 
