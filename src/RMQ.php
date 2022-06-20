@@ -202,10 +202,10 @@ class RMQ implements Queue
     public function __destruct()
     {
         if (!empty($this->channel)) {
-            unset(self::$instance->channel);
+            unset($this->channel);
         }
         if (!empty($this->client)) {
-            unset(self::$instance->client);
+            unset($this->client);
         }
     }
 }
