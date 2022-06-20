@@ -99,6 +99,9 @@ class SQS implements QueueInterface
         return $this;
     }
 
+    /**
+     * @return bool
+     */
     public function connectionStatus(): bool
     {
         $connected = false;

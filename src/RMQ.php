@@ -6,6 +6,7 @@ namespace Memcrab\Queue;
 
 use PhpAmqpLib\Connection\AMQPStreamConnection as AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage as AMQPMessage;
+use PhpAmqpLib\Channel\AMQPChannel as AMQPChannel;
 
 class RMQ implements QueueInterface
 {
@@ -88,22 +89,25 @@ class RMQ implements QueueInterface
         return $this;
     }
 
-    public static function connectionStatus(): bool
+    /**
+     * @return bool
+     */
+    public function connectionStatus(): bool
     {
         $connected = false;
 
         try {
-            $client = self::obj()->client();
-            if ($client instanceof AMQPStreamConnection) {
-                self::obj()->client()->listQueues();
+            $client = $this->client();
+            if ($client instanceof AMQPStreamConnection && $client->isConnected()) {
                 $connected = true;
-            } else $connected = false;
+            }
         } catch (\Exception $e) {
             $connected = false;
         }
 
         return $connected;
     }
+
     /**
      * @param string $name
      * @param bool $passive
@@ -207,10 +211,10 @@ class RMQ implements QueueInterface
      */
     public static function shutdown(): void
     {
-        if (isset(self::$instance->channel)) {
+        if (isset(self::$instance->channel) && (self::$instance->channel instanceof AMQPChannel)) {
             self::$instance->channel->close();
         }
-        if (isset(self::$instance->client)) {
+        if (isset(self::$instance->client) && (self::$instance->client instanceof AMQPStreamConnection)) {
             self::$instance->client->close();
         }
     }
