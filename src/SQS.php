@@ -28,6 +28,9 @@ class SQS
     {
     }
 
+    /**
+     * @return self
+     */
     public static function obj(): self
     {
         if (!isset(self::$instance) || !(self::$instance instanceof self)) {
@@ -40,7 +43,7 @@ class SQS
     /**
      * @param array $properties
      * 
-     * @return array
+     * @return void
      */
     public static function setConnectionProperties(array $properties): void
     {
@@ -98,9 +101,10 @@ class SQS
     }
 
     /**
-     * @param  string  $name
-     * @param  array   $atributes
-     * @return mixed
+     * @param string $name
+     * @param array|null $atributes
+     * 
+     * @return self
      */
     public function registerQueue(string $name, ?array $atributes = []): self
     {
@@ -120,10 +124,11 @@ class SQS
     }
 
     /**
-     * @param  string  $name
-     * @param  array   $message
-     * @param  int     $VisibilityTimeout
-     * @return mixed
+     * @param string $name
+     * @param array $message
+     * @param int $VisibilityTimeout
+     * 
+     * @return self
      */
     public function changeMessageVisibility(string $name, array $message, int $VisibilityTimeout): self
     {
@@ -212,13 +217,18 @@ class SQS
     }
 
     /**
-     * @param  string  $queueName
+     * @param string $queueName
+     * 
+     * @return string
      */
     public function getQueueUrl(string $queueName): string
     {
         return $this->urls[$queueName];
     }
 
+    /**
+     * @return void
+     */
     public static function shutdown(): void
     {
         if (isset(self::$instance->client)) {
