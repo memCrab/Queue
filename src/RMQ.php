@@ -18,7 +18,7 @@ class RMQ implements QueueInterface
     private $channel;
 
 
-    private function __construct()
+    public function __construct()
     {
     }
     private function __clone()
@@ -88,22 +88,27 @@ class RMQ implements QueueInterface
         return $this;
     }
 
-    public static function connectionStatus(): bool
+    /**
+     * @return bool
+     */
+    public function connectionStatus(): bool
     {
         $connected = false;
 
         try {
-            $client = self::obj()->client();
+            $client = $this->client();
             if ($client instanceof AMQPStreamConnection) {
-                self::obj()->client()->listQueues();
-                $connected = true;
-            } else $connected = false;
+                if ($client->isConnected()) {
+                    $connected = true;
+                }
+            }
         } catch (\Exception $e) {
             $connected = false;
         }
 
         return $connected;
     }
+
     /**
      * @param string $name
      * @param bool $passive
@@ -205,13 +210,13 @@ class RMQ implements QueueInterface
     /**
      * @return void
      */
-    public static function shutdown(): void
+    public function shutdown(): void
     {
-        if (isset(self::$instance->channel)) {
-            self::$instance->channel->close();
+        if (isset($this->channel)) {
+            $this->channel->close();
         }
-        if (isset(self::$instance->client)) {
-            self::$instance->client->close();
+        if (isset($this->client)) {
+            $this->client->close();
         }
     }
 

@@ -50,6 +50,14 @@ If we need to change message's visability, we can use:
 
 $connection->changeMessageVisibility('queue_name', ['messages'], 10), where 10 - needle visibility timeout.
 
+To check connection:
+
+$connection->connectionStatus();
+
+To get list of all queues:
+
+$connection->getListOfQueues();
+
 
 To send message:
 
@@ -126,6 +134,10 @@ The method also have optional parameters like:
 You can use these parameters like:
 
 $connection->registerExchange('exchange_name', 'direct', true, true, false);
+
+To check connection:
+
+$connection->connectionStatus();
 
 
 To send message:

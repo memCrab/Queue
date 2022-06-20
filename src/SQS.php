@@ -99,6 +99,9 @@ class SQS implements QueueInterface
         return $this;
     }
 
+    /**
+     * @return bool
+     */
     public function connectionStatus(): bool
     {
         $connected = false;
@@ -262,10 +265,10 @@ class SQS implements QueueInterface
     /**
      * @return void
      */
-    public static function shutdown(): void
+    public function shutdown(): void
     {
-        if (isset(self::$instance->client)) {
-            unset(self::$instance->client);
+        if (isset($this->client)) {
+            unset($this->client);
         }
     }
 
