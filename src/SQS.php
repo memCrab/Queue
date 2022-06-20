@@ -1,12 +1,12 @@
 <?php
-
+//TODO: Register and use any queues only with environment prefix or sufix
 declare(strict_types=1);
 
 namespace Memcrab\Queue;
 
 use Aws\Sqs\SqsClient;
 
-class SQS
+class SQS implements QueueInterface
 {
     public  $client = null;
     public  $test = null;
@@ -88,13 +88,46 @@ class SQS
                     'secret' => self::$secret,
                 ]
             ]);
-            exit('Server is running...000');
         } catch (\Exception $e) {
             error_log((string) $e);
             throw $e;
         }
 
         return $this;
+    }
+
+    public function connectionStatus(): bool
+    {
+        $connected = false;
+
+        try {
+            $client = $this->client();
+            if ($client instanceof SqsClient) {
+                $client->listQueues();
+                $connected = true;
+            } else $connected = false;
+        } catch (\Exception $e) {
+            $connected = false;
+        }
+
+        return $connected;
+    }
+
+    /**
+     * @param  string  $name
+     * @param  array   $atributes
+     * @return mixed
+     */
+    public function getListOfQueues()
+    {
+        try {
+            $result = $this->client->listQueues();
+        } catch (\Exception $e) {
+            error_log((string) $e);
+            throw $e;
+        }
+
+        return $result;
     }
 
     /**

@@ -7,7 +7,7 @@ namespace Memcrab\Queue;
 use PhpAmqpLib\Connection\AMQPStreamConnection as AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage as AMQPMessage;
 
-class RMQ implements Queue
+class RMQ implements QueueInterface
 {
     private static RMQ $instance;
     private static string $host;
@@ -83,6 +83,22 @@ class RMQ implements Queue
         return $this;
     }
 
+    public static function connectionStatus(): bool
+    {
+        $connected = false;
+
+        try {
+            $client = self::obj()->client();
+            if ($client instanceof AMQPStreamConnection) {
+                self::obj()->client()->listQueues();
+                $connected = true;
+            } else $connected = false;
+        } catch (\Exception $e) {
+            $connected = false;
+        }
+
+        return $connected;
+    }
     /**
      * @param string $name
      * @param bool $passive
