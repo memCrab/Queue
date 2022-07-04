@@ -15,6 +15,7 @@ class RMQ implements QueueInterface
     private static int $port;
     private static string $username;
     private static string $password;
+    private static \Memcrab\Log\Log $ErrorHandler;
     private AMQPStreamConnection $client;
     private $channel;
 
@@ -46,66 +47,67 @@ class RMQ implements QueueInterface
      * 
      * @return void
      */
-    public static function setConnectionProperties(array $properties): void
+    public static function declareConnection(array $properties, \Memcrab\Log\Log $ErrorHandler): void
     {
-        try {
-            if (!isset($properties['host']) || empty($properties['host']) || !is_string($properties['host'])) {
-                throw new \Exception("RabbitMQ `host` property need to be string");
-            }
-            if (!isset($properties['port']) || !is_int($properties['port'])) {
-                throw new \Exception("RabbitMQ `port` property need to be int");
-            }
-            if (!isset($properties['username']) || empty($properties['username']) || !is_string($properties['username'])) {
-                throw new \Exception("RabbitMQ `username` property need to be string");
-            }
-            if (!isset($properties['password']) || empty($properties['password']) || !is_string($properties['password'])) {
-                throw new \Exception("RabbitMQ `password` property need to be string");
-            }
-
-            self::$host = $properties['host'];
-            self::$port = $properties['port'];
-            self::$username = $properties['username'];
-            self::$password = $properties['password'];
-        } catch (\Exception $e) {
-            error_log((string) $e);
-            throw $e;
+        if (!isset($properties['host']) || empty($properties['host']) || !is_string($properties['host'])) {
+            throw new \Exception("RabbitMQ `host` property need to be string");
         }
+        if (!isset($properties['port']) || !is_int($properties['port'])) {
+            throw new \Exception("RabbitMQ `port` property need to be int");
+        }
+        if (!isset($properties['username']) || empty($properties['username']) || !is_string($properties['username'])) {
+            throw new \Exception("RabbitMQ `username` property need to be string");
+        }
+        if (!isset($properties['password']) || empty($properties['password']) || !is_string($properties['password'])) {
+            throw new \Exception("RabbitMQ `password` property need to be string");
+        }
+
+        self::$host = $properties['host'];
+        self::$port = $properties['port'];
+        self::$username = $properties['username'];
+        self::$password = $properties['password'];
+        self::$ErrorHandler = $ErrorHandler;
+
+        \register_shutdown_function("Memcrab\Queue\RMQ::shutdown");
     }
 
     /**
      * @return Queue
      */
-    public function connect(): self
+    public function connect(): bool
     {
-        $this->client = new AMQPStreamConnection(
-            self::$host,
-            self::$port,
-            self::$username,
-            self::$password
-        );
+        try {
+            $this->client = new AMQPStreamConnection(
+                self::$host,
+                self::$port,
+                self::$username,
+                self::$password
+            );
 
-        $this->channel = $this->client->channel();
-
-        return $this;
+            $this->channel = $this->client->channel();
+            return true;
+        } catch (\Exception $e) {
+            self::$ErrorHandler->error((string) $e);
+            return false;
+        }
     }
 
     /**
      * @return bool
      */
-    public function connectionStatus(): bool
+    public function ping(): bool
     {
-        $connected = false;
-
         try {
             $client = $this->client();
             if ($client instanceof AMQPStreamConnection && $client->isConnected()) {
-                $connected = true;
+                return true;
+            } else {
+                throw new \Exception('RabbitMQ Connection check failed', 500);
             }
         } catch (\Exception $e) {
-            $connected = false;
+            self::$ErrorHandler->error((string) $e);
+            return false;
         }
-
-        return $connected;
     }
 
     /**
@@ -203,12 +205,6 @@ class RMQ implements QueueInterface
         return $this->client;
     }
 
-    // TODO: add destructor with disconnect of connection
-    // TODO: recheck if we realy need do both channel and client close() in shutdown or only client? does any of them has method close? need to look to documentaion of Rabbit SDK
-    // TODO: add checks in shutdown if instance are already initialized before call close() methods as it static method and can be called it self even before any obj() initialization
-    /**
-     * @return void
-     */
     public static function shutdown(): void
     {
         if (isset(self::$instance->channel) && (self::$instance->channel instanceof AMQPChannel)) {
