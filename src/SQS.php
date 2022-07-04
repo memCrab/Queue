@@ -17,6 +17,7 @@ class SQS implements QueueInterface
     private static string $endpoint;
     private static string $key;
     private static string $secret;
+    private static \Memcrab\Log\Log $ErrorHandler;
 
     private function __construct()
     {
@@ -45,44 +46,42 @@ class SQS implements QueueInterface
      * 
      * @return void
      */
-    public static function setConnectionProperties(array $properties): void
+    public static function declareConnection(array $properties, \Memcrab\Log\Log $ErrorHandler): void
     {
-        try {
-            if (!isset($properties['region']) || empty($properties['region']) || !is_string($properties['region'])) {
-                throw new \Exception("Aws `region` property need to be string");
-            }
-            if (!isset($properties['version']) || empty($properties['version']) || !is_string($properties['version'])) {
-                throw new \Exception("Aws `version` property need to be string");
-            }
-            if (!isset($properties['endpoint']) || empty($properties['endpoint']) || !is_string($properties['endpoint'])) {
-                throw new \Exception("Aws `endpoint` property need to be string");
-            }
-            if (!isset($properties['key']) || empty($properties['key']) || !is_string($properties['key'])) {
-                throw new \Exception("Aws `key` property need to be string");
-            }
-            if (!isset($properties['secret']) || empty($properties['secret']) || !is_string($properties['secret'])) {
-                throw new \Exception("Aws `secret` property need to be string");
-            }
 
-            self::$region = $properties['region'];
-            self::$version = $properties['version'];
-            self::$endpoint = $properties['endpoint'];
-            self::$key = $properties['key'];
-            self::$secret = $properties['secret'];
-        } catch (\Exception $e) {
-            error_log((string) $e);
-            throw $e;
+        if (!isset($properties['region']) || empty($properties['region']) || !is_string($properties['region'])) {
+            throw new \Exception("Aws `region` property need to be string");
         }
+        if (!isset($properties['version']) || empty($properties['version']) || !is_string($properties['version'])) {
+            throw new \Exception("Aws `version` property need to be string");
+        }
+        if (!isset($properties['endpoint']) || empty($properties['endpoint']) || !is_string($properties['endpoint'])) {
+            throw new \Exception("Aws `endpoint` property need to be string");
+        }
+        if (!isset($properties['key']) || empty($properties['key']) || !is_string($properties['key'])) {
+            throw new \Exception("Aws `key` property need to be string");
+        }
+        if (!isset($properties['secret']) || empty($properties['secret']) || !is_string($properties['secret'])) {
+            throw new \Exception("Aws `secret` property need to be string");
+        }
+
+        self::$region = $properties['region'];
+        self::$version = $properties['version'];
+        self::$endpoint = $properties['endpoint'];
+        self::$key = $properties['key'];
+        self::$secret = $properties['secret'];
+        self::$ErrorHandler = $ErrorHandler;
+
+        \register_shutdown_function("Memcrab\Queue\SQS::shutdown");
     }
 
     /**
      * @return Queue
      */
-    public function connect(): self
+    public function connect(): bool
     {
         try {
-            $Test =  $this;
-            $Test->client = new SqsClient([
+            $this->client = new SqsClient([
                 'region' => self::$region,
                 'version' => self::$version,
                 'endpoint' => self::$endpoint,
@@ -91,18 +90,17 @@ class SQS implements QueueInterface
                     'secret' => self::$secret,
                 ]
             ]);
+            return true;
         } catch (\Exception $e) {
-            error_log((string) $e);
-            throw $e;
+            self::$ErrorHandler->error((string) $e);
+            return false;
         }
-
-        return $this;
     }
 
     /**
      * @return bool
      */
-    public function connectionStatus(): bool
+    public function ping(): bool
     {
         $connected = false;
 
@@ -113,6 +111,7 @@ class SQS implements QueueInterface
                 $connected = true;
             } else $connected = false;
         } catch (\Exception $e) {
+            self::$ErrorHandler->error((string) $e);
             $connected = false;
         }
 
@@ -129,7 +128,7 @@ class SQS implements QueueInterface
         try {
             $result = $this->client->listQueues();
         } catch (\Exception $e) {
-            error_log((string) $e);
+            self::$ErrorHandler->error((string) $e);
             throw $e;
         }
 
@@ -152,7 +151,7 @@ class SQS implements QueueInterface
             ]);
             $this->urls[$name] = $result->get('QueueUrl');
         } catch (\Exception $e) {
-            error_log((string) $e);
+            self::$ErrorHandler->error((string) $e);
             throw $e;
         }
 
@@ -176,7 +175,7 @@ class SQS implements QueueInterface
                 'VisibilityTimeout' => $VisibilityTimeout,
             ]);
         } catch (\Exception $e) {
-            error_log((string) $e);
+            self::$ErrorHandler->error((string) $e);
             throw $e;
         }
 
@@ -201,7 +200,7 @@ class SQS implements QueueInterface
                 'QueueUrl' => $this->urls[$name],
             ]);
         } catch (\Exception $e) {
-            error_log((string) $e);
+            self::$ErrorHandler->error((string) $e);
             throw $e;
         }
         return $result;
@@ -222,7 +221,7 @@ class SQS implements QueueInterface
                 'WaitTimeSeconds' => 20,
             ]);
         } catch (\Exception $e) {
-            error_log((string) $e);
+            self::$ErrorHandler->error((string) $e);
             throw $e;
         }
         return $result;
@@ -241,7 +240,7 @@ class SQS implements QueueInterface
                 'ReceiptHandle' => $message['ReceiptHandle'], // REQUIRED
             ]);
         } catch (\Exception $e) {
-            error_log((string) $e);
+            self::$ErrorHandler->error((string) $e);
             throw $e;
         }
         return $result;
