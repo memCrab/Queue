@@ -40,6 +40,11 @@ class RabbitMQ
         return $e instanceof AMQPConnectionClosedException;
     }
 
+    private function getQueueNameWithEnv(string $name): string
+    {
+        return $this->environment . '-' . $name;
+    }
+
     public function isConnectionError(): bool
     {
         return $this->connectionError;
@@ -72,6 +77,7 @@ class RabbitMQ
     public function registerQueue(string $name, bool $passive = false, bool $durable = false, bool $exclusive = false, bool $auto_delete = false): array
     {
         try {
+            $name = $this->getQueueNameWithEnv($name);
             $result = $this->channel->queue_declare($name, $passive, $durable, $exclusive, $auto_delete);
         } catch (\Exception $e) {
             $this->error($e);
@@ -94,6 +100,7 @@ class RabbitMQ
     public function registerExchange(string $name, string $type, bool $passive = false, bool $durable = false, bool $auto_delete = false)
     {
         try {
+            $name = $this->getQueueNameWithEnv($name);
             $result = $this->channel->exchange_declare($name, $type, $passive, $durable, $auto_delete);
         } catch (\Exception $e) {
             $this->error($e);
@@ -114,6 +121,7 @@ class RabbitMQ
     public function sendMessage(string $name, array $messageBody, string $exchange = '')
     {
         try {
+            $name = $this->getQueueNameWithEnv($name);
             $msg = new AMQPMessage(serialize($messageBody));
             $this->channel->basic_publish($msg, $exchange, $name);
         } catch (\Exception $e) {
@@ -145,6 +153,7 @@ class RabbitMQ
     )
     {
         try {
+            $name = $this->getQueueNameWithEnv($name);
             $result = $this->channel->basic_consume($name, $consumer_tag, $no_local, $no_ack, $exclusive, $nowait, $callback);
             while ($this->channel->is_open()) {
                 $this->channel->wait();
@@ -166,6 +175,7 @@ class RabbitMQ
     public function queueBind(string $name, string $exchange, string $routing_key)
     {
         try {
+            $name = $this->getQueueNameWithEnv($name);
             $result = $this->channel->queue_bind($name, $exchange, $routing_key);
         } catch (\Exception $e) {
             $this->error($e);
