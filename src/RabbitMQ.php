@@ -52,7 +52,10 @@ class RabbitMQ
 
     public function heartbeat(): void
     {
-        $this->client->channel();
+        $client = $this->client();
+        if (!$client->isConnected()) {
+            throw new \Exception('RabbitMQ Connection check failed');
+        }
     }
 
     public function close(): void
