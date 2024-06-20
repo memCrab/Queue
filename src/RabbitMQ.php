@@ -14,15 +14,18 @@ class RabbitMQ
     private string $environment;
     private Logger $ErrorHandler;
     private bool $connectionError = false;
-    public AMQPStreamConnection $client;
-    public AMQPChannel $channel;
+    private AMQPStreamConnection $client;
+    private AMQPChannel $channel;
 
-    public function __construct(string $environment, string $host, int $port, string $username, string $password, Logger $ErrorHandler)
+    private static string $letterExchange = "dlx";
+    private static string $letterRoutineKey = "dlrk";
+
+    public function __construct(string $environment, string $host, int $port, string $username, string $password, int $heartbeat, Logger $ErrorHandler)
     {
         $this->environment = $environment;
         $this->ErrorHandler = $ErrorHandler;
         try {
-            $this->client = new AMQPStreamConnection($host, $port, $username, $password);
+            $this->client = new AMQPStreamConnection($host, $port, $username, $password, heartbeat: $heartbeat);
             $this->channel = $this->client->channel();
         } catch (\Exception $e) {
             throw new \Exception("Cant connect to RabbitMQ. " . $e, 500);
@@ -40,9 +43,19 @@ class RabbitMQ
         return $e instanceof AMQPConnectionClosedException;
     }
 
-    private function getQueueNameWithEnv(string $name): string
+    private function getNameWithEnv(string $name): string
     {
-        return $this->environment . '-' . $name;
+        return $this->environment . ':' . $name;
+    }
+
+    public function getLetterExchange(): string
+    {
+        return $this->environment . ':' . self::$letterExchange;
+    }
+
+    public function getLetterRoutineKey(string $name): string
+    {
+        return $this->getNameWithEnv($name) . '-' . self::$letterRoutineKey;
     }
 
     public function isConnectionError(): bool
@@ -52,6 +65,7 @@ class RabbitMQ
 
     public function heartbeat(): void
     {
+        $this->client->getConnection()->checkHeartBeat();
         if (!$this->client()->isConnected()) {
             throw new \Exception('RabbitMQ Connection check failed');
         }
@@ -79,7 +93,7 @@ class RabbitMQ
     public function registerQueue(string $name, bool $passive = false, bool $durable = false, bool $exclusive = false, bool $auto_delete = false): array
     {
         try {
-            $name = $this->getQueueNameWithEnv($name);
+            $name = $this->getNameWithEnv($name);
             $result = $this->channel->queue_declare($name, $passive, $durable, $exclusive, $auto_delete);
         } catch (\Exception $e) {
             $this->error($e);
@@ -102,7 +116,6 @@ class RabbitMQ
     public function registerExchange(string $name, string $type, bool $passive = false, bool $durable = false, bool $auto_delete = false)
     {
         try {
-            $name = $this->getQueueNameWithEnv($name);
             $result = $this->channel->exchange_declare($name, $type, $passive, $durable, $auto_delete);
         } catch (\Exception $e) {
             $this->error($e);
@@ -120,12 +133,20 @@ class RabbitMQ
      * @return true [type]
      * @throws \Exception
      */
-    public function sendMessage(string $name, array $messageBody, string $exchange = '')
+    public function sendMessage(array $messageBody, string $routingKey, string $exchange = '')
     {
         try {
-            $name = $this->getQueueNameWithEnv($name);
-            $msg = new AMQPMessage(serialize($messageBody));
-            $this->channel->basic_publish($msg, $exchange, $name);
+            if (empty($exchange)) {
+                $exchange = $this->getLetterExchange();
+            }
+
+            $routingKey = self::getLetterRoutineKey($routingKey);
+
+            $message = new AMQPMessage(
+                json_encode($messageBody, JSON_UNESCAPED_UNICODE),
+                ['delivery_mode' => 2]
+            );
+            $this->channel->basic_publish($message, $exchange, $routingKey);
         } catch (\Exception $e) {
             $this->error($e);
             throw $e;
@@ -155,7 +176,7 @@ class RabbitMQ
     )
     {
         try {
-            $name = $this->getQueueNameWithEnv($name);
+            $name = $this->getNameWithEnv($name);
             $result = $this->channel->basic_consume($name, $consumer_tag, $no_local, $no_ack, $exclusive, $nowait, $callback);
             while ($this->channel->is_open()) {
                 $this->channel->wait();
@@ -174,11 +195,11 @@ class RabbitMQ
      * @param string $routing_key
      * @return mixed
      */
-    public function queueBind(string $name, string $exchange, string $routing_key)
+    public function queueBind(string $queue, string $exchange, string $routing_key)
     {
         try {
-            $name = $this->getQueueNameWithEnv($name);
-            $result = $this->channel->queue_bind($name, $exchange, $routing_key);
+            $queue = $this->getNameWithEnv($queue);
+            $result = $this->channel->queue_bind($queue, $exchange, $routing_key);
         } catch (\Exception $e) {
             $this->error($e);
             throw $e;
