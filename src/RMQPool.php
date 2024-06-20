@@ -13,6 +13,7 @@ class RMQPool extends Pool
     private static int $port;
     private static string $username;
     private static string $password;
+    private static int $heartbeat;
 
     private function __clone()
     {
@@ -36,6 +37,7 @@ class RMQPool extends Pool
         Logger $ErrorHandler,
         int    $waitTimeoutPool,
         int    $capacity = self::DEFAULT_CAPACITY,
+        int    $heartbeat = 0,
     ): void
     {
         self::$instance = new self($capacity);
@@ -47,6 +49,7 @@ class RMQPool extends Pool
         self::$port = $port;
         self::$username = $username;
         self::$password = $password;
+        self::$heartbeat = $heartbeat;
     }
 
     protected function error(\Exception $e): void
@@ -57,7 +60,7 @@ class RMQPool extends Pool
     protected function connect(): RabbitMQ|bool
     {
         try {
-            return (new RabbitMQ(self::$environment, self::$host, self::$port, self::$username, self::$password, $this->ErrorHandler));
+            return (new RabbitMQ(self::$environment, self::$host, self::$port, self::$username, self::$password, self::$heartbeat, $this->ErrorHandler));
         } catch (\Exception $e) {
             $this->error($e);
             return false;
